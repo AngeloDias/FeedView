@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Podcast</string>
+    <string name="item_title">Título do Episódio</string>
+    <string name="item_date">15/03/2021</string>
+    <string name="action_download">Download</string>
+    <string name="action_play">Escutar</string>
+    <string name="action_pause">Pausar</string>
+    <string name="link_inicial">https://jovemnerd.com.br/feed-nerdcast/</string>
+</resources>
