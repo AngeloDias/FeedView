@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="Manage preferences">
+
+        <EditTextPreference
+            android:key="@string/shared_preferences_key"
+            android:title="Feed Link"
+            android:dialogTitle="Edit feed link"
+            android:dialogMessage="Type the new feed link"
+            android:positiveButtonText="Save"
+            android:negativeButtonText="Cancel" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

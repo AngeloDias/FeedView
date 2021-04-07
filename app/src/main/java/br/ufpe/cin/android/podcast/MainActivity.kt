@@ -1,8 +1,13 @@
 package br.ufpe.cin.android.podcast
 
 import android.content.Intent
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import br.ufpe.cin.android.podcast.databinding.ActivityMainBinding
 import br.ufpe.cin.android.podcast.view.ArticlesAdapter
@@ -18,6 +23,7 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
     private lateinit var binding : ActivityMainBinding
     private lateinit var parser : Parser
     private val scope = CoroutineScope(Dispatchers.Main.immediate)
+    private lateinit var sharedPref: SharedPreferences
 
     companion object {
         val PODCAST_FEED = "https://jovemnerd.com.br/feed-nerdcast/"
@@ -39,9 +45,16 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
 
     override fun onStart() {
         super.onStart()
+
+        sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+
         scope.launch {
             val channel = withContext(Dispatchers.IO) {
-                parser.getChannel(PODCAST_FEED)
+                val feedLink = sharedPref.getString(
+                    getString(R.string.shared_preferences_key),
+                    getString(R.string.link_inicial))
+
+                parser.getChannel(feedLink!!)
             }
 
             binding.articlesRecycler.adapter = ArticlesAdapter(channel.articles, this@MainActivity)
@@ -58,4 +71,26 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
 
         startActivity(intent)
     }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        val inflater: MenuInflater = menuInflater
+
+        inflater.inflate(R.menu.preferences_menu, menu)
+
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Handle item selection
+        return when (item.itemId) {
+            R.id.edit_shared_preferences -> {
+                startActivity(Intent(this, PreferenciasActivity::class.java))
+
+                true
+            }
+
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
 }

@@ -6,4 +6,9 @@
     <string name="action_play">Escutar</string>
     <string name="action_pause">Pausar</string>
     <string name="link_inicial">https://jovemnerd.com.br/feed-nerdcast/</string>
+    <string name="image_about_episode">Image about episode</string>
+    <string name="episode_description_txt">Description</string>
+    <string name="episode_url_txt">Episode URL</string>
+    <string name="edit_preferences_txt">Edit preferences</string>
+    <string name="shared_preferences_key">rssfeed</string>
 </resources>
