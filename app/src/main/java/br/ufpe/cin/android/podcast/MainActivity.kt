@@ -9,6 +9,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import br.ufpe.cin.android.podcast.database.EpisodioDatabase
 import br.ufpe.cin.android.podcast.databinding.ActivityMainBinding
 import br.ufpe.cin.android.podcast.view.ArticlesAdapter
 import br.ufpe.cin.android.podcast.view.OnEpisodeTitleClickListener
