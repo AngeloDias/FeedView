@@ -1,7 +1,7 @@
 package br.ufpe.cin.android.podcast.view
 
-import com.prof.rssparser.Article
+import br.ufpe.cin.android.podcast.data.Episodio
 
 interface OnEpisodeTitleClickListener {
-    fun onClick(articleEpisode: Article)
+    fun onClick(episode: Episodio)
 }
