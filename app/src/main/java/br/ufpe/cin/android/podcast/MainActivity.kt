@@ -1,36 +1,45 @@
 package br.ufpe.cin.android.podcast
 
-import android.content.Intent
-import android.content.SharedPreferences
-import androidx.appcompat.app.AppCompatActivity
+import android.content.*
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import br.ufpe.cin.android.podcast.data.Episodio
 import br.ufpe.cin.android.podcast.database.EpisodioDatabase
 import br.ufpe.cin.android.podcast.database.EpisodioRepository
 import br.ufpe.cin.android.podcast.databinding.ActivityMainBinding
+import br.ufpe.cin.android.podcast.download.DownloadService
 import br.ufpe.cin.android.podcast.view.EpisodiosAdapter
 import br.ufpe.cin.android.podcast.view.OnEpisodeTitleClickListener
-import com.prof.rssparser.Article
-import com.prof.rssparser.Parser
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
     private lateinit var binding : ActivityMainBinding
-    private lateinit var parser : Parser
-    private val scope = CoroutineScope(Dispatchers.Main.immediate)
-    private lateinit var sharedPref: SharedPreferences
     private val viewModel: EpisodioViewModel by viewModels {
         EpisodioViewModelFactory(EpisodioRepository(EpisodioDatabase.getInstance(this).dao()))
+    }
+
+    private val onDownloadComplete = object: BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val mutableListEpisodios = mutableListOf<Episodio>()
+            viewModel.episodios.value?.forEach {
+                mutableListEpisodios.add(it)
+            }
+
+            binding.articlesRecycler.adapter = EpisodiosAdapter(
+                mutableListEpisodios,
+                this@MainActivity)
+
+            binding.articlesRecycler.layoutManager = LinearLayoutManager(this@MainActivity)
+
+            Toast.makeText(context, "Download completed successfully", Toast.LENGTH_SHORT).show()
+        }
+
     }
 
     companion object {
@@ -46,11 +55,9 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
         setContentView(binding.root)
 
         val episodiosAdapter = EpisodiosAdapter(mutableListOf(), this)
+        val intent = Intent(this, DownloadService::class.java)
 
-        parser = Parser.Builder()
-            .context(this)
-            .cacheExpirationMillis(24L * 60L * 60L * 100L)
-            .build()
+        DownloadService.enqueueWork(this, intent)
 
         viewModel.episodios.observe(
             this,
@@ -60,44 +67,14 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
         )
     }
 
-    override fun onStart() {
-        super.onStart()
+    override fun onResume() {
+        super.onResume()
+        registerReceiver(onDownloadComplete, IntentFilter(DownloadService.DOWNLOAD_COMPLETE))
+    }
 
-        sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-
-        scope.launch {
-            val channel = withContext(Dispatchers.IO) {
-                val feedLink = sharedPref.getString(
-                    getString(R.string.shared_preferences_key),
-                    getString(R.string.link_inicial))
-
-                parser.getChannel(feedLink!!)
-            }
-
-            val episodios = mutableListOf<Episodio>()
-
-            channel.articles.forEach {
-                val linkEpisodio = it.link ?: ""
-                val titulo = it.title ?: ""
-                val descricao = it.description ?: ""
-                val linkArquivo = it.sourceUrl ?: ""
-                val dataPublicacao = it.pubDate ?: ""
-
-                val episodio = Episodio(linkEpisodio, titulo, descricao, linkArquivo, dataPublicacao)
-
-                episodios.add(episodio)
-
-                viewModel.insert(episodio)
-            }
-
-            if(channel.articles.isEmpty() && viewModel.episodios.value?.isNotEmpty() == true) {
-                episodios.addAll(viewModel.episodios.value!!)
-            }
-
-            binding.articlesRecycler.adapter = EpisodiosAdapter(episodios, this@MainActivity)
-            binding.articlesRecycler.layoutManager = LinearLayoutManager(this@MainActivity)
-        }
-
+    override fun onPause() {
+        unregisterReceiver(onDownloadComplete)
+        super.onPause()
     }
 
     override fun onClick(episode: Episodio) {
