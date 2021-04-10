@@ -1,10 +1,13 @@
 package br.ufpe.cin.android.podcast
 
 import android.content.*
+import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.view.View
+import android.webkit.URLUtil
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -14,15 +17,18 @@ import br.ufpe.cin.android.podcast.data.Episodio
 import br.ufpe.cin.android.podcast.database.EpisodioDatabase
 import br.ufpe.cin.android.podcast.database.EpisodioRepository
 import br.ufpe.cin.android.podcast.databinding.ActivityMainBinding
-import br.ufpe.cin.android.podcast.download.DownloadService
+import br.ufpe.cin.android.podcast.download.DownloadEpisodiosService
+import br.ufpe.cin.android.podcast.download.DownloadAudioFileService
 import br.ufpe.cin.android.podcast.view.EpisodiosAdapter
 import br.ufpe.cin.android.podcast.view.OnEpisodeTitleClickListener
 
 class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
     private lateinit var binding : ActivityMainBinding
+    private lateinit var episodiosAdapter: EpisodiosAdapter
     private val viewModel: EpisodioViewModel by viewModels {
         EpisodioViewModelFactory(EpisodioRepository(EpisodioDatabase.getInstance(this).dao()))
     }
+    private var positionItemDownloaded = 0
 
     private val onDownloadComplete = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -39,6 +45,16 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
 
             Toast.makeText(context, "Download completed successfully", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private val onAudioFileDownload = object: BroadcastReceiver() {
+
+        override fun onReceive(context: Context?, intent: Intent?) {
+            Toast.makeText(
+                context,
+                "Audio file download completed",
+                Toast.LENGTH_SHORT).show()
+        }
 
     }
 
@@ -47,6 +63,7 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
 
         const val EXTRA_EPISODE_DESCRIPTION = "EPISODE_DESCRIPTION"
         const val EXTRA_EPISODE_LINK = "EPISODE_LINK"
+        const val EXTRA_EPISODE_AUDIO_TO_DOWNLOAD_TITLE = "EXTRA_EPISODE_AUDIO_TO_DOWNLOAD_TITLE"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,10 +71,9 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val episodiosAdapter = EpisodiosAdapter(mutableListOf(), this)
-        val intent = Intent(this, DownloadService::class.java)
+        episodiosAdapter = EpisodiosAdapter(mutableListOf(), this)
 
-        DownloadService.enqueueWork(this, intent)
+        DownloadEpisodiosService.enqueueWork(this, Intent(this, DownloadEpisodiosService::class.java))
 
         viewModel.episodios.observe(
             this,
@@ -69,21 +85,43 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
 
     override fun onResume() {
         super.onResume()
-        registerReceiver(onDownloadComplete, IntentFilter(DownloadService.DOWNLOAD_COMPLETE))
+        registerReceiver(onDownloadComplete, IntentFilter(DownloadEpisodiosService.DOWNLOAD_EPISODIOS_COMPLETE))
+        registerReceiver(onAudioFileDownload, IntentFilter(DownloadAudioFileService.DOWNLOAD_AUDIO_FILE_COMPLETE))
     }
 
     override fun onPause() {
         unregisterReceiver(onDownloadComplete)
+        unregisterReceiver(onAudioFileDownload)
         super.onPause()
     }
 
-    override fun onClick(episode: Episodio) {
-        val intent = Intent(this, EpisodeDetailActivity::class.java)
+    override fun onClick(episode: Episodio, itemView: View) {
+        when(itemView.id) {
+            R.id.item_title -> {
+                val intent = Intent(this, EpisodeDetailActivity::class.java)
 
-        intent.putExtra(EXTRA_EPISODE_DESCRIPTION, episode.descricao)
-        intent.putExtra(EXTRA_EPISODE_LINK, episode.linkEpisodio)
+                intent.putExtra(EXTRA_EPISODE_DESCRIPTION, episode.descricao)
+                intent.putExtra(EXTRA_EPISODE_LINK, episode.linkArquivo)
 
-        startActivity(intent)
+                startActivity(intent)
+            }
+
+            R.id.item_action -> {
+                val fileLink = episode.linkArquivo
+
+                if(URLUtil.isHttpsUrl(fileLink) || URLUtil.isHttpUrl(fileLink)) {
+                    val intent = Intent(this, DownloadAudioFileService::class.java)
+
+                    intent.data = Uri.parse(episode.linkArquivo)
+
+                    intent.putExtra(EXTRA_EPISODE_AUDIO_TO_DOWNLOAD_TITLE, episode.titulo)
+
+                    Toast.makeText(applicationContext, "Audio download started", Toast.LENGTH_SHORT).show()
+                    DownloadAudioFileService.enqueueDownloadFileWork(this, intent)
+                }
+            }
+        }
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

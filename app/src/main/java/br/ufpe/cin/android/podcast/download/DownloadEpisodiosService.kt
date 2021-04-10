@@ -14,14 +14,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class DownloadService: JobIntentService() {
+class DownloadEpisodiosService: JobIntentService() {
 
     companion object {
         private val JOB_ID = 1234
-        val DOWNLOAD_COMPLETE = "br.ufpe.cin.android.podcast.download"
+        val DOWNLOAD_EPISODIOS_COMPLETE = "br.ufpe.cin.android.podcast.download.DownloadEpisodiosService"
 
         fun enqueueWork(context: Context, intent: Intent) {
-            enqueueWork(context, DownloadService::class.java, JOB_ID, intent)
+            enqueueWork(context, DownloadEpisodiosService::class.java, JOB_ID, intent)
         }
     }
 
@@ -49,7 +49,7 @@ class DownloadService: JobIntentService() {
                 val linkEpisodio = it.link ?: ""
                 val titulo = it.title ?: ""
                 val descricao = it.description ?: ""
-                val linkArquivo = it.sourceUrl ?: ""
+                val linkArquivo = it.audio ?: ""
                 val dataPublicacao = it.pubDate ?: ""
 
                 val episodio =
@@ -58,7 +58,7 @@ class DownloadService: JobIntentService() {
                 repo.insert(episodio)
             }
 
-            sendBroadcast(Intent(DOWNLOAD_COMPLETE))
+            sendBroadcast(Intent(DOWNLOAD_EPISODIOS_COMPLETE))
         }
     }
 

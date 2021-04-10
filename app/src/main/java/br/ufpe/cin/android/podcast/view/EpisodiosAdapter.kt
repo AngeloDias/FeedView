@@ -1,9 +1,12 @@
 package br.ufpe.cin.android.podcast.view
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
+import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -15,6 +18,7 @@ class EpisodiosAdapter(private val episodios: MutableList<Episodio>, var onTitle
     class ViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val itemTitleTxtView: TextView = view.findViewById(R.id.item_title)
         val itemDateTxtView: TextView = view.findViewById(R.id.item_date)
+        val itemDownloadButton: Button = view.findViewById(R.id.item_action)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -28,7 +32,11 @@ class EpisodiosAdapter(private val episodios: MutableList<Episodio>, var onTitle
         holder.itemDateTxtView.text = episodios[position].dataPublicacao
 
         holder.itemTitleTxtView.setOnClickListener{
-            onTitleClicked.onClick(episodios[position])
+            onTitleClicked.onClick(episodios[position], it)
+        }
+
+        holder.itemDownloadButton.setOnClickListener {
+            onTitleClicked.onClick(episodios[position], it)
         }
     }
 
