@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:allowBackup="true"
@@ -13,7 +14,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Podcast">
-        <activity android:name=".EpisodeDetailActivity"/>
+        <service
+            android:name=".PlayAudioFileService"
+            android:enabled="true"
+            android:exported="false"/>
+
+        <activity android:name=".EpisodeDetailActivity" />
         <activity android:name=".PreferenciasActivity" />
         <activity android:name=".MainActivity">
             <intent-filter>
@@ -26,11 +32,9 @@
         <service
             android:name=".download.DownloadEpisodiosService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
-
         <service
             android:name=".download.DownloadAudioFileService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
-
     </application>
 
 </manifest>

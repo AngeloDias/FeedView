@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.URLUtil
 import android.widget.Button
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
@@ -14,6 +15,7 @@ import br.ufpe.cin.android.podcast.R
 import br.ufpe.cin.android.podcast.data.Episodio
 
 class EpisodiosAdapter(private val episodios: MutableList<Episodio>, var onTitleClicked: OnEpisodeTitleClickListener): ListAdapter<Episodio, EpisodiosAdapter.ViewHolder>(ArticleDiffer) {
+    private lateinit var parentContext: Context
 
     class ViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val itemTitleTxtView: TextView = view.findViewById(R.id.item_title)
@@ -23,6 +25,8 @@ class EpisodiosAdapter(private val episodios: MutableList<Episodio>, var onTitle
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.itemfeed, parent, false)
+
+        parentContext = parent.context
 
         return ViewHolder(view)
     }
@@ -35,9 +39,27 @@ class EpisodiosAdapter(private val episodios: MutableList<Episodio>, var onTitle
             onTitleClicked.onClick(episodios[position], it)
         }
 
+        val filePath = episodios[position].linkArquivo
+
+        if(!(URLUtil.isHttpsUrl(filePath) || URLUtil.isHttpUrl(filePath))) {
+            holder.itemDownloadButton.setCompoundDrawablesWithIntrinsicBounds(
+                ResourcesCompat.getDrawable(parentContext.resources,
+                    R.drawable.iconfinder_play,
+                    null),
+            null,
+            null,
+            null)
+
+            holder.itemDownloadButton.text = ""
+        }
+
         holder.itemDownloadButton.setOnClickListener {
             onTitleClicked.onClick(episodios[position], it)
         }
+    }
+
+    fun refreshData(position: Int) {
+        notifyItemChanged(position)
     }
 
     override fun getItemCount(): Int {

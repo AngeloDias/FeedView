@@ -28,7 +28,6 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
     private val viewModel: EpisodioViewModel by viewModels {
         EpisodioViewModelFactory(EpisodioRepository(EpisodioDatabase.getInstance(this).dao()))
     }
-    private var positionItemDownloaded = 0
 
     private val onDownloadComplete = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -108,9 +107,10 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
 
             R.id.item_action -> {
                 val fileLink = episode.linkArquivo
+                val intent: Intent
 
                 if(URLUtil.isHttpsUrl(fileLink) || URLUtil.isHttpUrl(fileLink)) {
-                    val intent = Intent(this, DownloadAudioFileService::class.java)
+                    intent = Intent(this, DownloadAudioFileService::class.java)
 
                     intent.data = Uri.parse(episode.linkArquivo)
 
@@ -118,8 +118,17 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
 
                     Toast.makeText(applicationContext, "Audio download started", Toast.LENGTH_SHORT).show()
                     DownloadAudioFileService.enqueueDownloadFileWork(this, intent)
+                } else if(fileLink.isNotEmpty() && fileLink.isNotBlank()){
+                    intent = Intent(this, PlayAudioFileService::class.java)
+
+                    intent.putExtra(
+                        PlayAudioFileService.AUDIO_FILE_PATH_TO_DOWNLOAD,
+                        fileLink)
+
+                    startService(intent)
                 }
             }
+
         }
 
     }
