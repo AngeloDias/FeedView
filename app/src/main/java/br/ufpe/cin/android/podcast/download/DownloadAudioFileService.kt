@@ -78,7 +78,8 @@ class DownloadAudioFileService: JobIntentService() {
                     linkArquivo = output.path,
                     linkEpisodio = ep.linkEpisodio,
                     dataPublicacao = ep.dataPublicacao,
-                    descricao = ep.descricao)
+                    descricao = ep.descricao,
+                    posicaoAudio = ep.posicaoAudio)
 
                 repo.update(episodio)
             }

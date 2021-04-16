@@ -3,6 +3,7 @@ package br.ufpe.cin.android.podcast
 import android.content.*
 import android.net.Uri
 import android.os.Bundle
+import android.os.IBinder
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -17,8 +18,8 @@ import br.ufpe.cin.android.podcast.data.Episodio
 import br.ufpe.cin.android.podcast.database.EpisodioDatabase
 import br.ufpe.cin.android.podcast.database.EpisodioRepository
 import br.ufpe.cin.android.podcast.databinding.ActivityMainBinding
-import br.ufpe.cin.android.podcast.download.DownloadEpisodiosService
 import br.ufpe.cin.android.podcast.download.DownloadAudioFileService
+import br.ufpe.cin.android.podcast.download.DownloadEpisodiosService
 import br.ufpe.cin.android.podcast.view.EpisodiosAdapter
 import br.ufpe.cin.android.podcast.view.OnEpisodeTitleClickListener
 
@@ -27,6 +28,22 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
     private lateinit var episodiosAdapter: EpisodiosAdapter
     private val viewModel: EpisodioViewModel by viewModels {
         EpisodioViewModelFactory(EpisodioRepository(EpisodioDatabase.getInstance(this).dao()))
+    }
+    private var musicPlayerService: PlayAudioFileService? = null
+    private var isBound = false
+
+    private val serviceConnection = object: ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            isBound = true
+            val musicBinder = service as PlayAudioFileService.MusicBinder
+
+            musicPlayerService = musicBinder.service
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            isBound = false
+            musicPlayerService = null
+        }
     }
 
     private val onDownloadComplete = object: BroadcastReceiver() {
@@ -69,6 +86,7 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        startService(Intent(this, PlayAudioFileService::class.java))
 
         episodiosAdapter = EpisodiosAdapter(mutableListOf(), this)
 
@@ -80,6 +98,10 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
                 episodiosAdapter.submitList(it.toList())
             }
         )
+
+        if(!isBound) {
+            bindService()
+        }
     }
 
     override fun onResume() {
@@ -92,6 +114,24 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
         unregisterReceiver(onDownloadComplete)
         unregisterReceiver(onAudioFileDownload)
         super.onPause()
+    }
+
+    override fun onStop() {
+        if(isBound) {
+            unbindService(serviceConnection)
+            isBound = false
+        }
+
+        super.onStop()
+    }
+
+    private fun bindService() {
+        val bindServiceIntent = Intent(this, PlayAudioFileService::class.java)
+
+        bindService(
+            bindServiceIntent,
+            serviceConnection,
+            Context.BIND_AUTO_CREATE)
     }
 
     override fun onClick(episode: Episodio, itemView: View) {
@@ -115,17 +155,28 @@ class MainActivity : AppCompatActivity(), OnEpisodeTitleClickListener {
                     intent.data = Uri.parse(episode.linkArquivo)
 
                     intent.putExtra(EXTRA_EPISODE_AUDIO_TO_DOWNLOAD_TITLE, episode.titulo)
-
                     Toast.makeText(applicationContext, "Audio download started", Toast.LENGTH_SHORT).show()
                     DownloadAudioFileService.enqueueDownloadFileWork(this, intent)
+
                 } else if(fileLink.isNotEmpty() && fileLink.isNotBlank()){
-                    intent = Intent(this, PlayAudioFileService::class.java)
+                    musicPlayerService?.playOrPauseMusic(fileLink, episode.posicaoAudio)
 
-                    intent.putExtra(
-                        PlayAudioFileService.AUDIO_FILE_PATH_TO_DOWNLOAD,
-                        fileLink)
+                    if(musicPlayerService?.isPlaying() == false) {
+                        val position = musicPlayerService?.audioPositionWhenReproducing() ?: 0
 
-                    startService(intent)
+                        if(position > 0) {
+                            val episodioSalvo = Episodio(
+                                linkArquivo = episode.linkArquivo,
+                                linkEpisodio = episode.linkEpisodio,
+                                descricao = episode.descricao,
+                                dataPublicacao = episode.dataPublicacao,
+                                titulo = episode.titulo,
+                                posicaoAudio = position
+                            )
+
+                            viewModel.update(episodioSalvo)
+                        }
+                    }
                 }
             }
 

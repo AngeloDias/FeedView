@@ -53,7 +53,7 @@ class DownloadEpisodiosService: JobIntentService() {
                 val dataPublicacao = it.pubDate ?: ""
 
                 val episodio =
-                    Episodio(linkEpisodio, titulo, descricao, linkArquivo, dataPublicacao)
+                    Episodio(linkEpisodio, titulo, descricao, linkArquivo, dataPublicacao, 0)
 
                 repo.insert(episodio)
             }
